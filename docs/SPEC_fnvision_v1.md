@@ -2,8 +2,9 @@
 
 ## Technical Specification v1
 
-Status: Draft v1
+Status: Ratified v1.1
 Date: 2026-02-21
+Updated: 2026-02-21 (v1.1 – reflects MF1 implementation decisions)
 License: Apache 2.0
 Tag: #fnvision
 
@@ -43,7 +44,7 @@ Vision is built around two coupled foveal centers: **F1** and **F2**.
 
 Each center contributes a Gaussian weight field centered on its position:
 
-```
+```text
 w_i(x) = exp(-||x - p_i||^2 / (2 * sigma_i^2))
 ```
 
@@ -58,16 +59,20 @@ logic – it emerges from the geometry.
 
 ### 3.2 Three Resolution Zones
 
-Resolution is sampled non-uniformly. From each F-center outward:
+Resolution is sampled non-uniformly based on the normalised combined weight field `w_out(x)`:
 
-| Zone | Distance from F-center | Effective Resolution |
+| Zone | w_out threshold | Effective Resolution |
 | --- | --- | --- |
-| Fovea | 0 – 1× sigma | Full (1.0) |
-| Parafovea | 1× – 3× sigma | ~60% (configurable) |
-| Periphery | 3× sigma – edge | ~15% (configurable) |
+| Fovea | w_out >= 0.60 | Full (1.0) |
+| Parafovea | 0.15 <= w_out < 0.60 | ~60% (configurable) |
+| Periphery | w_out < 0.15 | ~15% (configurable) |
 
-Exact sampling is driven by the combined weight field `w(x)`. Higher weight = higher resolution
-budget allocated to that region.
+Zone boundaries use Hermite smoothstep blending (t²(3-2t)) to avoid hard ring artifacts.
+All three zone masks sum to exactly 1.0 at every pixel (compositing invariant).
+
+The zone thresholds (0.60 and 0.15) are configurable via `FoveaConfig` and can be tuned
+using the calibration tool. Using weight-field thresholds rather than distance from F-center
+avoids a hard boundary artifact on the perpendicular bisector between F1 and F2.
 
 ### 3.3 Zoom via Convergence
 
@@ -81,7 +86,7 @@ budget allocated to that region.
 
 A passive pull force returns the centers toward maximum separation:
 
-```
+```text
 F_pull = k * (d_max - d_current)
 ```
 
@@ -173,9 +178,38 @@ class FoveaConfig:
 
     # Attention
     periphery_attention_floor: float = 0.15   # min periphery factor at attention_level=0
+    attention_inner_threshold: float = 0.30   # attention below this → inner zones also scale
+
+    # Weight field and zone thresholds
+    weight_gamma: float = 1.0                 # w_out shaping: w_out = w_norm ** gamma
+    fovea_threshold: float = 0.60             # w_out >= threshold → fovea zone
+    para_threshold: float = 0.15              # w_out >= threshold → parafovea zone
+    zoom_max_bonus: float = 0.40              # zoom = 1.0 + zoom_max_bonus * (1 - sep)
 ```
 
-Config can be loaded from and saved to YAML via the calibration tool.
+Config can be loaded from and saved to YAML via the calibration tool (no PyYAML required).
+
+### 7.1 Formal Definitions (MF1)
+
+**Zoom function** (Opus 4.6, 2026-02-21):
+
+```text
+zoom = 1.0 + zoom_max_bonus * (1.0 - f_separation_norm)
+  f_separation_norm = 0.0 → zoom = 1.40  (co-located, maximum zoom)
+  f_separation_norm = 1.0 → zoom = 1.00  (resting state, wide-angle)
+```
+
+**Attention functions** (Opus 4.6, 2026-02-21):
+
+```text
+peri_factor  = periphery_attention_floor + (1 - periphery_attention_floor) * attention_level
+
+inner_factor = 1.0                               if attention_level >= attention_inner_threshold
+             = 0.5 + 0.5 * (attention_level
+                             / attention_inner_threshold)  otherwise
+```
+
+Both functions are continuous and monotone in `attention_level`.
 
 ---
 
@@ -272,13 +306,14 @@ No deep learning framework required. No CUDA. CPU-only baseline.
 
 ## 12. Project Structure
 
-```
+```text
 fnvision_dev/                   <- dev environment (not published directly)
 ├── fnvision/                   <- Python package
 │   ├── __init__.py
 │   ├── encoder.py              <- FoveaEncoder
 │   ├── config.py               <- FoveaConfig
-│   ├── gaze.py                 <- gaze dynamics + F-system spring model
+│   ├── weight_field.py         <- Gaussian dual-fovea weight field (pure function)
+│   ├── gaze.py                 <- gaze dynamics + F-system spring model (MF2)
 │   └── tools/
 │       └── calibration.py      <- live calibration tool
 ├── examples/
@@ -340,11 +375,13 @@ and the metadata files). The dev environment around it stays local.
 
 ## 14. Open Points
 
-- **Gaussian sampling strategy**: dense weight map computed at full input resolution (accurate,
-  more memory) vs. ring-based approximation computed at output resolution (faster). Decision
-  after MF1 profiling.
-- **Parafovea tensor origin**: sampled from weight field (fully weight-driven) vs. fixed annular
-  crop + downsample (simpler). Evaluate perceptual quality difference.
+- **Gaussian sampling strategy**: **Resolved (MF1): Dense weight map.** Ring-based
+  approximation creates spatial discontinuities on the perpendicular bisector between F1/F2,
+  especially visible during convergence zoom. Dense vectorized NumPy pipeline is fast enough
+  on CPU. Performance profiling deferred to MF2.
+- **Parafovea tensor origin**: **Resolved (MF1): Sampled from weight field.** A fixed annular
+  crop would require its own radius parameterisation as a function of F-separation — a
+  redundant model of geometry already encoded by the weight field.
 - **Calibration tool UI framework**: `tkinter` (zero extra deps, ships with Python) vs.
   `PyQt5` / `PySide6` (richer UI, one extra dep). Current preference: `tkinter` for MF3,
   optional PyQt5 backend later.

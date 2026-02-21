@@ -1,6 +1,7 @@
 # fnvision – Fovea Native Vision
 # Apache License 2.0
 
-# Placeholder – populated during MF1 implementation.
-# Public API will be:
-#   from fnvision import FoveaConfig, FoveaEncoder, FoveaOutput
+from .config import FoveaConfig, FoveaOutput
+from .encoder import FoveaEncoder
+
+__all__ = ["FoveaConfig", "FoveaOutput", "FoveaEncoder"]

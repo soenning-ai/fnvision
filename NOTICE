@@ -1,11 +1,36 @@
 fnvision – Fovea Native Vision
-Copyright 2026 [Author – Sebastian Sönning]
+Copyright 2026 Sebastian Sönning
 
 This product is licensed under the Apache License, Version 2.0.
 You may obtain a copy of the License at:
 
     http://www.apache.org/licenses/LICENSE-2.0
 
-This software includes no third-party components with separate copyright notices
-at the time of initial release. Third-party attributions will be added here if
-dependencies with their own NOTICE requirements are introduced.
+---
+
+Third-Party Software Notices
+
+fnvision depends on the following open-source libraries at runtime.
+These libraries are not bundled with fnvision; they are installed
+separately as declared dependencies.
+
+NumPy
+  License: BSD 3-Clause
+  Copyright (c) 2005-2024, NumPy Developers
+  <https://numpy.org>
+
+OpenCV (opencv-python)
+  License: Apache License 2.0
+  Copyright (c) 2000-2024, Intel Corporation / OpenCV contributors
+  <https://opencv.org>
+
+Python Standard Library
+  License: Python Software Foundation License Version 2
+  Copyright (c) 2001-2024, Python Software Foundation
+  <https://www.python.org>
+
+---
+
+The calibration tool (fnvision/tools/calibration.py, MF3) additionally
+uses tkinter, which ships with the Python Standard Library under the
+same PSF License.

@@ -13,7 +13,6 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - `fnvision/gaze.py`: stateful `GazeController` + `GazeState`
 - `tests/test_gaze.py`: MF2 deterministic/stochastic/replay test coverage
-- `nachbesprechung_m2.md`: MF2 completion documentation
 - `fnvision/tools/calibration.py`: M3 baseline calibration UI (live preview, sliders, mouse gaze, YAML save)
 - `fnvision/tools/__init__.py`: tool package init for script entrypoint
 

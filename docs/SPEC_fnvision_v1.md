@@ -1,389 +1,312 @@
-# fnvision – Fovea Native Vision
+# fnvision - Fovea Native Vision
 
-## Technical Specification v1
+## Technical Specification v1.2
 
-Status: Ratified v1.1
-Date: 2026-02-21
-Updated: 2026-02-21 (v1.1 – reflects MF1 implementation decisions)
-License: Apache 2.0
+Status: Ratified v1.2  
+Date: 2026-02-22  
+Updated: 2026-02-22 (MF2 completed and validated)  
+License: Apache 2.0  
 Tag: #fnvision
+
+---
+
+## v1.2 Change Summary (MF2)
+
+- MF2 (stateful gaze dynamics) is implemented and gated.
+- `fnvision/gaze.py` provides `GazeController` and `GazeState`.
+- Phase-B stochastic path is active:
+  - hold-probability (saccade skip only)
+  - additive jitter with `dt > 0` guard
+  - snapshot/reset helpers for replay
+- Validation at ratification:
+  - `tests/test_gaze.py`: 22 passed
+  - full suite: 93 passed
+- Reviews:
+  - Opus gate pass for B1/B2
+  - Sonnet API/spec and test review pass for B3/B4
 
 ---
 
 ## 1. What Is fnvision
 
-A lightweight, biologically-motivated foveated vision encoder for autonomous agents, robotics,
-and AI research.
+A lightweight, biologically motivated foveated vision encoder for autonomous agents,
+robotics, and AI research.
 
-No heavy transformers. No log-polar distortion. No patch tricks.
-
-Native float32 sampling with a dual fovea (F1/F2) system and emergent zoom via convergence.
-A live calibration tool lets you see through the encoder's eyes in real time – like an optician
-appointment for your model.
-
----
-
-## 2. The Gap in Existing Approaches
-
-| Approach | Problem |
-| --- | --- |
-| Log-Polar (classical, PMC8645638) | Geometric distortion – CNNs cannot handle curved straight lines |
-| Foveated Tokenization (Meta, CVPR 2025) | Patch-based, transformer-bound, no true fovea |
-| Foveated Dynamic Transformer (ICLR 2025) | ViT + MHSA overhead, ~34% compute reduction but still heavyweight |
-
-fnvision takes the first-principles approach: model vision the way biology does it, without
-cramming it into existing heavy architectures.
+- No transformers required
+- No log-polar geometric distortion
+- Dual fovea (F1/F2) with emergent zoom by convergence
+- Float32 output tensors from uint8 RGB input
 
 ---
 
-## 3. Core Concept – Binocular F-System
+## 2. Core Concept
 
-### 3.1 Two Foveal Centers
+### 2.1 Dual Fovea Weight Field
 
-Vision is built around two coupled foveal centers: **F1** and **F2**.
-
-Each center contributes a Gaussian weight field centered on its position:
+Two foveal centers `F1` and `F2` define the spatial acuity field.
 
 ```text
-w_i(x) = exp(-||x - p_i||^2 / (2 * sigma_i^2))
+w_i(x)   = exp(-||x - p_i||^2 / (2 * sigma_i^2))
+w_raw(x) = w_1(x) + w_2(x)
+w_norm   = w_raw / max(w_raw)
+w_out    = w_norm ** gamma
 ```
 
-Where:
+`w_out` is used for zone blending and is normalized to `[0,1]`.
 
-- `p_i` = normalized position of foveal center i in `[0, 1]^2`
-- `sigma_i` = focal radius (configured per center)
-- Combined weight: `w(x) = w_1(x) + w_2(x)` (additive superposition)
+### 2.2 Three Resolution Zones
 
-In the overlap zone both Gaussians add. Effective sharpness is higher there without any explicit
-logic – it emerges from the geometry.
-
-### 3.2 Three Resolution Zones
-
-Resolution is sampled non-uniformly based on the normalised combined weight field `w_out(x)`:
-
-| Zone | w_out threshold | Effective Resolution |
+| Zone | Threshold on `w_out` | Effective Resolution |
 | --- | --- | --- |
-| Fovea | w_out >= 0.60 | Full (1.0) |
-| Parafovea | 0.15 <= w_out < 0.60 | ~60% (configurable) |
-| Periphery | w_out < 0.15 | ~15% (configurable) |
+| Fovea | `w_out >= 0.60` | Full |
+| Parafovea | `0.15 <= w_out < 0.60` | Reduced (`parafovea_res_factor`) |
+| Periphery | `w_out < 0.15` | Reduced (`periphery_res_factor`) |
 
-Zone boundaries use Hermite smoothstep blending (t²(3-2t)) to avoid hard ring artifacts.
-All three zone masks sum to exactly 1.0 at every pixel (compositing invariant).
+Boundaries use smoothstep blending. The zone masks sum to 1.0 at each pixel.
 
-The zone thresholds (0.60 and 0.15) are configurable via `FoveaConfig` and can be tuned
-using the calibration tool. Using weight-field thresholds rather than distance from F-center
-avoids a hard boundary artifact on the perpendicular bisector between F1 and F2.
+### 2.3 Zoom by Convergence
 
-### 3.3 Zoom via Convergence
+Zoom is controlled by normalized F1/F2 separation:
 
-**The single control parameter for zoom is the normalized distance between F1 and F2.**
+- max separation -> wide-angle
+- min separation (co-located) -> max zoom
 
-| F1/F2 State | Effect |
-| --- | --- |
-| Maximum separation (resting state) | Wide-angle oval field |
-| Minimum separation (co-located) | ~140% effective zoom on focal point |
-| Partial convergence | Continuous zoom interpolation |
-
-A passive pull force returns the centers toward maximum separation:
+Formal zoom function:
 
 ```text
-F_pull = k * (d_max - d_current)
+zoom = 1.0 + zoom_max_bonus * (1.0 - f_separation_norm)
 ```
 
-Zoom costs active energy. Relaxation returns to wide-angle. `k` is the single calibration
-parameter.
-
-This mirrors biological reality: accommodation and convergence are mechanically coupled in the
-human eye. fnvision models this relationship directly instead of adding a separate zoom
-abstraction.
+With `zoom_max_bonus = 0.40`, convergence yields ~1.4x zoom.
 
 ---
 
-## 4. Gaze Dynamics
+## 3. Gaze Dynamics (MF2)
 
-The gaze point (center of the F-system) moves independently of any motor effector. The caller
-drives gaze via salient target coordinates. fnvision handles the movement dynamics.
+The stateful gaze layer is implemented in `GazeController.step(...)`.
 
-Movement follows a saccade model:
+### 3.1 State
 
-- Smooth pursuit toward salient target
-- Step size capped per tick (`gaze_max_step_norm`)
-- Optional hold probability (simulate fixation)
-- Configurable jitter for biological realism
+```python
+@dataclass
+class GazeState:
+    gaze_xy: tuple[float, float]
+    f_separation_norm: float
+    tick: int
+```
 
-fnvision does not compute saliency internally. Saliency is the caller's responsibility.
-fnvision is a pure encoder.
+F1/F2 are derived from `gaze_xy` and `f_separation_norm` (horizontal symmetric in v1.x).
+
+### 3.2 Runtime Order per Tick
+
+1. Clamp inputs (`target_xy`, `attention_level`, `dt`)
+2. Hold check (stochastic): if triggered, skip only saccade movement
+3. Saccade update with overshoot cap (`gaze_max_step_norm * dt`)
+4. First-order spring pull on separation
+5. Jitter update if `dt > 0` and `gaze_jitter_norm > 0`
+6. Bounds clamp so derived F1/F2 stay inside `[0,1]`
+7. `tick += 1`
+
+### 3.3 Invariants
+
+- `dt < 0` or non-finite `dt` -> `ValueError`
+- `dt == 0` -> no motion update (tick still increments)
+- hold/jitter consume no RNG when `dt == 0`
+- separation is clamped to `[f_separation_min_norm, f_separation_max_norm]`
+- derived F1/F2 remain in `[0,1]`
+
+### 3.4 RNG Semantics (Option A)
+
+- `rng=None` -> internal `default_rng()` (non-deterministic)
+- deterministic reproducibility requires explicit seeded RNG or restored RNG state
 
 ---
 
-## 5. Attention Level Parameter
+## 4. Attention Level
 
-fnvision accepts one optional external signal: `attention_level: float [0.0, 1.0]`.
+`attention_level: float` in `[0,1]` is accepted by the encoder API.
 
-When `attention_level < 1.0`:
+MF1 behavior:
 
-- Periphery resolution scales down proportionally (tunnel effect)
-- Inner zones are unaffected until `attention_level < 0.3`
+- periphery scales with `attention_level`
+- inner zones remain full until `attention_level < attention_inner_threshold`
 
-This is a generalized interface. Callers map their own state onto it:
+MF2 behavior:
 
-- Autonomous agents: map arousal / energy level
-- Robotics: map battery or task urgency
-- Not needed: pass `1.0` (default = full attention)
+- jitter is not attention-coupled in v1.2
+- optional attention-coupled jitter is deferred to v2 ideas
 
 ---
 
-## 6. Output Data Contract
+## 5. Output Data Contract
 
 ```python
 @dataclass
 class FoveaOutput:
-    fovea: np.ndarray           # float32[fovea_h, fovea_w, 3]
-    parafovea: np.ndarray       # float32[para_h, para_w, 3]
-    periphery: np.ndarray       # float32[peri_h, peri_w, 3]
-    weight_map: np.ndarray      # float32[H, W] – combined Gaussian weights (full resolution)
-    f1_pos_norm: tuple          # (float, float) – F1 position in [0,1]^2
-    f2_pos_norm: tuple          # (float, float) – F2 position in [0,1]^2
-    f_separation_norm: float    # current F1/F2 distance (0 = co-located, 1 = max)
-    attention_level: float      # echoed back from input
+    fovea: np.ndarray
+    parafovea: np.ndarray
+    periphery: np.ndarray
+    weight_map: np.ndarray
+    f1_pos_norm: tuple[float, float]
+    f2_pos_norm: tuple[float, float]
+    f_separation_norm: float
+    attention_level: float
 ```
 
-All spatial tensors are `float32` in range `[0, 1]`.
-Input frames are `uint8` RGB; conversion is handled internally.
+All image-like outputs are `float32` in `[0,1]`.
 
 ---
 
-## 7. Configuration
+## 6. Configuration
 
 ```python
 @dataclass
 class FoveaConfig:
-    # Zone sizing
-    focal_radius_norm: float = 0.12       # sigma for Gaussian in normalized coords
-    fovea_res: tuple = (96, 96)           # output resolution for fovea tensor
-    parafovea_res: tuple = (128, 128)     # output resolution for parafovea tensor
-    periphery_res: tuple = (96, 96)       # output resolution for periphery tensor
-    parafovea_res_factor: float = 0.60    # relative resolution at 1–3x sigma
-    periphery_res_factor: float = 0.15    # relative resolution beyond 3x sigma
+    focal_radius_norm: float = 0.12
+    fovea_res: tuple[int, int] = (96, 96)
+    parafovea_res: tuple[int, int] = (128, 128)
+    periphery_res: tuple[int, int] = (96, 96)
+    parafovea_res_factor: float = 0.60
+    periphery_res_factor: float = 0.15
 
-    # Zoom / F-system
-    f_separation_max_norm: float = 0.28   # max F1/F2 distance (normalized)
-    f_separation_min_norm: float = 0.00   # min distance (fully co-located = max zoom)
-    pull_strength: float = 0.015          # spring constant k
+    f_separation_max_norm: float = 0.28
+    f_separation_min_norm: float = 0.00
+    zoom_max_bonus: float = 0.40
+    pull_strength: float = 0.015
 
-    # Gaze dynamics
-    gaze_max_step_norm: float = 0.06      # max gaze movement per tick
-    gaze_hold_prob: float = 0.12          # probability of fixation hold per tick
-    gaze_jitter_norm: float = 0.010       # random jitter amplitude
+    gaze_max_step_norm: float = 0.06
+    gaze_hold_prob: float = 0.12
+    gaze_jitter_norm: float = 0.010
 
-    # Attention
-    periphery_attention_floor: float = 0.15   # min periphery factor at attention_level=0
-    attention_inner_threshold: float = 0.30   # attention below this → inner zones also scale
+    periphery_attention_floor: float = 0.15
+    attention_inner_threshold: float = 0.30
 
-    # Weight field and zone thresholds
-    weight_gamma: float = 1.0                 # w_out shaping: w_out = w_norm ** gamma
-    fovea_threshold: float = 0.60             # w_out >= threshold → fovea zone
-    para_threshold: float = 0.15              # w_out >= threshold → parafovea zone
-    zoom_max_bonus: float = 0.40              # zoom = 1.0 + zoom_max_bonus * (1 - sep)
+    weight_gamma: float = 1.0
+    fovea_threshold: float = 0.60
+    para_threshold: float = 0.15
 ```
-
-Config can be loaded from and saved to YAML via the calibration tool (no PyYAML required).
-
-### 7.1 Formal Definitions (MF1)
-
-**Zoom function** (Opus 4.6, 2026-02-21):
-
-```text
-zoom = 1.0 + zoom_max_bonus * (1.0 - f_separation_norm)
-  f_separation_norm = 0.0 → zoom = 1.40  (co-located, maximum zoom)
-  f_separation_norm = 1.0 → zoom = 1.00  (resting state, wide-angle)
-```
-
-**Attention functions** (Opus 4.6, 2026-02-21):
-
-```text
-peri_factor  = periphery_attention_floor + (1 - periphery_attention_floor) * attention_level
-
-inner_factor = 1.0                               if attention_level >= attention_inner_threshold
-             = 0.5 + 0.5 * (attention_level
-                             / attention_inner_threshold)  otherwise
-```
-
-Both functions are continuous and monotone in `attention_level`.
 
 ---
 
-## 8. Calibration Tool (Optiker-Prinzip)
+## 7. API
 
-An interactive live tool to tune all config parameters while watching through the encoder's
-eyes in real time.
-
-"If you can see through it, you can tune it."
-
-### Features
-
-- Live preview: what the encoder sees at each zone (fovea / parafovea / periphery side by side)
-- Weight map overlay: Gaussian fields as heatmap over the source frame
-- Sliders for all `FoveaConfig` parameters with live feedback
-- F1/F2 position visualization with draggable handles
-- F-separation slider for testing zoom behavior
-- Attention level slider for simulating low-attention states
-- Input: screen region capture, camera feed, or static image file
-- Config export: saves current settings as YAML
-
-### Input Sources
-
-- `--source screen` – capture a configurable screen region (default)
-- `--source camera` – webcam feed
-- `--source <file>` – static image or video file for offline tuning
-
----
-
-## 9. API
+Stateless encoder usage:
 
 ```python
 from fnvision import FoveaConfig, FoveaEncoder
 
-cfg = FoveaConfig(focal_radius_norm=0.12, pull_strength=0.015)
+cfg = FoveaConfig()
 encoder = FoveaEncoder(cfg)
+out = encoder.encode(frame_rgb=frame, gaze_xy=(0.5, 0.5), f_separation=1.0, attention_level=1.0)
+```
 
-# Encode a frame: uint8 RGB (H x W x 3), gaze at center, wide-angle
-result = encoder.encode(
-    frame_rgb=frame,
-    gaze_xy=(0.5, 0.5),
-    f_separation=1.0,      # 1.0 = max separation (wide-angle)
-    attention_level=1.0,   # 1.0 = full attention, no tunnel effect
-)
+Stateful MF2 usage:
 
-# Access outputs
-print(result.fovea.shape)        # (96, 96, 3)  float32
-print(result.parafovea.shape)    # (128, 128, 3) float32
-print(result.periphery.shape)    # (96, 96, 3)  float32
-print(result.weight_map.shape)   # (H, W)        float32
-print(result.f_separation_norm)  # 1.0
+```python
+from fnvision import FoveaConfig, FoveaEncoder, GazeController
 
-# Zoom in (converge F-centers)
-result_zoomed = encoder.encode(
-    frame_rgb=frame,
-    gaze_xy=(0.5, 0.5),
-    f_separation=0.0,      # fully co-located = ~140% zoom
-    attention_level=1.0,
-)
+cfg = FoveaConfig()
+encoder = FoveaEncoder(cfg)
+gaze = GazeController(config=cfg)
+
+for frame in stream:
+    st = gaze.step(target_xy=(0.6, 0.4), attention_level=1.0, dt=1.0)
+    sep_norm_01 = st.f_separation_norm / cfg.f_separation_max_norm if cfg.f_separation_max_norm > 0 else 0.0
+    out = encoder.encode(frame_rgb=frame, gaze_xy=st.gaze_xy, f_separation=sep_norm_01, attention_level=1.0)
 ```
 
 ---
 
-## 10. Dependencies
+## 8. Dependencies
 
 Runtime:
 
 - `numpy`
-- `opencv-python` (cv2) – resize and color space operations
+- `opencv-python`
 
-Calibration tool additionally:
+Optional tools:
 
-- `tkinter` (stdlib) or `PyQt5` / `PySide6`
-- `Pillow` (PIL)
-
-No deep learning framework required. No CUDA. CPU-only baseline.
+- `Pillow`
+- UI layer for calibration tool (`tkinter` or Qt backend)
 
 ---
 
-## 11. Comparison to Existing Approaches
-
-| | fnvision | Log-Polar | Meta CVPR 2025 | ICLR 2025 ViT |
-| --- | --- | --- | --- | --- |
-| Architecture | Standalone encoder | Classical | Transformer | ViT |
-| Distortion | None | High (geometric) | None (patches) | None (patches) |
-| Binocular F-system | Yes (F1 + F2) | No | No | No |
-| Zoom control | Single parameter | N/A | N/A | N/A |
-| GPU required | No | No | Yes | Yes |
-| External attention signal | Optional | No | No | No |
-| Live calibration tool | Yes | No | No | No |
-| pip installable | Yes | No | No | No |
-
----
-
-## 12. Project Structure
+## 9. Project Structure
 
 ```text
-fnvision_dev/                   <- dev environment (not published directly)
-├── fnvision/                   <- Python package
-│   ├── __init__.py
-│   ├── encoder.py              <- FoveaEncoder
-│   ├── config.py               <- FoveaConfig
-│   ├── weight_field.py         <- Gaussian dual-fovea weight field (pure function)
-│   ├── gaze.py                 <- gaze dynamics + F-system spring model (MF2)
-│   └── tools/
-│       └── calibration.py      <- live calibration tool
-├── examples/
-│   ├── basic_usage.py
-│   ├── calibration_demo.py
-│   └── agent_integration.py
-├── tests/
-│   └── test_encoder.py
-├── docs/
-│   └── SPEC_fnvision_v1.md     <- this file
-├── pyproject.toml
-├── LICENSE                     <- Apache 2.0
-├── NOTICE                      <- Apache 2.0 required attribution file
-├── README.md                   <- public-facing, sells the project
-├── CHANGELOG.md
-└── CONTRIBUTING.md
+fnvision_dev/
+|-- fnvision/
+|   |-- __init__.py
+|   |-- config.py
+|   |-- encoder.py
+|   |-- weight_field.py
+|   `-- gaze.py
+|-- tests/
+|   |-- test_encoder.py
+|   `-- test_gaze.py
+|-- tools/
+|   `-- build_index.py
+|-- DEV_NOTES.md
+|-- DEV_NOTES_M2.md
+|-- SPEC_fnvision_v1.md
+|-- README.md
+|-- CHANGELOG.md
+|-- pyproject.toml
+|-- LICENSE
+`-- NOTICE
 ```
 
-The `fnvision/` package is the only thing that goes to GitHub (plus examples, tests, docs,
-and the metadata files). The dev environment around it stays local.
+---
+
+## 10. Milestones
+
+### MF1 - Core Encoder
+
+Status: Completed (2026-02-21)
+
+### MF2 - Gaze Dynamics and Zoom
+
+Status: Completed (2026-02-22)
+
+Delivered:
+
+- deterministic and stochastic gaze dynamics
+- replay helpers (`copy_state`, `snapshot`, `reset`)
+- full review gates passed (Opus + Sonnet)
+- test hardening complete
+
+### MF3 - Calibration Tool
+
+Status: Open
+
+### MF4 - Public Release
+
+Status: Open
 
 ---
 
-## 13. Development Milestones
+## 11. Open Points
 
-### MF1 – Core Encoder
-
-- `FoveaConfig` dataclass + YAML load/save
-- `FoveaEncoder.encode()` with Gaussian weight field for F1 + F2
-- Three-zone sampling (fovea / parafovea / periphery) from weight field
-- `float32` output, `uint8` input conversion
-- Basic unit tests
-
-### MF2 – Gaze Dynamics and Zoom
-
-- F1/F2 separation control with spring-damper pull model
-- Gaze saccade model (step cap, hold probability, jitter)
-- `attention_level` integration (periphery scaling)
-- Stateful encoder (gaze state persists between ticks)
-
-### MF3 – Calibration Tool
-
-- Live preview: three zones side by side
-- Gaussian weight map overlay as heatmap
-- Sliders for all `FoveaConfig` parameters
-- F1/F2 draggable handles on preview
-- F-separation and attention sliders
-- Config export as YAML
-
-### MF4 – Public Release
-
-- `pyproject.toml` (pip installable as `fnvision`)
-- Full `README.md` with comparison table and quick start
-- All examples runnable standalone
-- Apache 2.0 `LICENSE` and `NOTICE` files
-- GitHub release with changelog
+- Calibration tool framework choice (`tkinter` vs Qt backend)
+- Binocular asymmetry (`sigma1 != sigma2`) after MF2
+- optional v2 extension: attention-coupled jitter scaling
 
 ---
 
-## 14. Open Points
+## 12. MF2 Completion Snapshot
 
-- **Gaussian sampling strategy**: **Resolved (MF1): Dense weight map.** Ring-based
-  approximation creates spatial discontinuities on the perpendicular bisector between F1/F2,
-  especially visible during convergence zoom. Dense vectorized NumPy pipeline is fast enough
-  on CPU. Performance profiling deferred to MF2.
-- **Parafovea tensor origin**: **Resolved (MF1): Sampled from weight field.** A fixed annular
-  crop would require its own radius parameterisation as a function of F-separation — a
-  redundant model of geometry already encoded by the weight field.
-- **Calibration tool UI framework**: `tkinter` (zero extra deps, ships with Python) vs.
-  `PyQt5` / `PySide6` (richer UI, one extra dep). Current preference: `tkinter` for MF3,
-  optional PyQt5 backend later.
-- **Binocular asymmetry**: allow F1 and F2 to have independent `sigma` values (e.g. dominant
-  eye simulation) or keep symmetric for simplicity. Evaluate after MF2.
+Scope:
+
+- Phase A: deterministic gaze core
+- Phase B: hold + jitter + replay
+
+Validation:
+
+- `tests/test_gaze.py`: 22 passed
+- full test suite: 93 passed
+
+Gate status:
+
+- Opus B1/B2 gate: PASSED
+- Sonnet B3/B4 review: PASSED
+

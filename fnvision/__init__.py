@@ -3,5 +3,12 @@
 
 from .config import FoveaConfig, FoveaOutput
 from .encoder import FoveaEncoder
+from .gaze import GazeController, GazeState
 
-__all__ = ["FoveaConfig", "FoveaOutput", "FoveaEncoder"]
+__all__ = [
+    "FoveaConfig",
+    "FoveaOutput",
+    "FoveaEncoder",
+    "GazeController",
+    "GazeState",
+]

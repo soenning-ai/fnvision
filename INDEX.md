@@ -1,16 +1,16 @@
 # INDEX
 
 Automatisch generierter Navigationsindex fuer aktive Python-Dateien (fnvision_dev).
-Stand: 2026-02-22 07:51:01 UTC
+Stand: 2026-02-22 08:54:01 UTC
 
 ## Dateien
 
 - Root: `C:/Users/sebas/.gemini/antigravity/scratch/AGI/fnvision_dev`
-- Indexierte Dateien: `6`
+- Indexierte Dateien: `8`
 
 ### `/fnvision/__init__.py`
 
-- Zeilen: `7`
+- Zeilen: `14`
 - Keine Klassen/Funktionen gefunden
 
 ### `/fnvision/config.py`
@@ -38,6 +38,22 @@ Stand: 2026-02-22 07:51:01 UTC
 - `def _apply_res_factor`: `367`-`384`
 - `def _resize_f32`: `387`-`403`
 - `def _smoothstep`: `406`-`413`
+
+### `/fnvision/gaze.py`
+
+- Zeilen: `180`
+- `def _clamp`: `14`-`15`
+- `class GazeState`: `19`-`24`
+- `class GazeController`: `27`-`180`
+- `def GazeController.__init__`: `41`-`56`
+- `def GazeController.state`: `59`-`60`
+- `def GazeController.copy_state`: `62`-`68`
+- `def GazeController.snapshot`: `70`-`72`
+- `def GazeController.reset`: `74`-`90`
+- `def GazeController.f1_pos_norm`: `93`-`98`
+- `def GazeController.f2_pos_norm`: `101`-`106`
+- `def GazeController.step`: `108`-`167`
+- `def GazeController._apply_bounds`: `169`-`180`
 
 ### `/fnvision/weight_field.py`
 
@@ -129,3 +145,35 @@ Stand: 2026-02-22 07:51:01 UTC
 - `def TestComputeWeightMap.test_aspect_ratio_non_square_shape`: `510`-`514`
 - `def TestComputeWeightMap.test_no_nan_small_sigma`: `516`-`520`
 - `def TestComputeWeightMap.test_gamma_shaping_monotone`: `522`-`528`
+
+### `/tests/test_gaze.py`
+
+- Zeilen: `235`
+- `def _dist`: `11`-`12`
+- `class TestGazeControllerInit`: `15`-`27`
+- `def TestGazeControllerInit.test_defaults`: `16`-`22`
+- `def TestGazeControllerInit.test_initial_gaze_is_clamped`: `24`-`27`
+- `class TestStepAndBounds`: `30`-`67`
+- `def TestStepAndBounds.test_tick_increments`: `31`-`36`
+- `def TestStepAndBounds.test_negative_dt_raises`: `38`-`41`
+- `def TestStepAndBounds.test_dt_zero_is_noop_except_tick`: `43`-`49`
+- `def TestStepAndBounds.test_target_clamped_to_unit_square`: `51`-`58`
+- `def TestStepAndBounds.test_f_positions_are_always_in_bounds`: `60`-`67`
+- `class TestSaccadeAndSpring`: `70`-`119`
+- `def TestSaccadeAndSpring.test_saccade_has_overshoot_cap`: `71`-`77`
+- `def TestSaccadeAndSpring.test_saccade_does_not_overshoot_target`: `79`-`84`
+- `def TestSaccadeAndSpring.test_pull_strength_zero_keeps_separation_constant`: `86`-`95`
+- `def TestSaccadeAndSpring.test_pull_moves_separation_toward_max`: `97`-`107`
+- `def TestSaccadeAndSpring.test_separation_is_clamped_for_large_dt`: `109`-`119`
+- `class TestDeterminismPhaseA`: `122`-`132`
+- `def TestDeterminismPhaseA.test_different_rngs_same_result_in_phase_a`: `123`-`132`
+- `class TestStochasticPhaseB`: `135`-`235`
+- `def TestStochasticPhaseB._target_at`: `136`-`137`
+- `def TestStochasticPhaseB._state_tuple`: `139`-`145`
+- `def TestStochasticPhaseB._pose_tuple`: `147`-`152`
+- `def TestStochasticPhaseB.test_seed_reproducibility_over_100_ticks`: `154`-`162`
+- `def TestStochasticPhaseB.test_hold_probability_effect`: `164`-`182`
+- `def TestStochasticPhaseB.test_jitter_bounds_fuzz_1000_ticks`: `184`-`192`
+- `def TestStochasticPhaseB.test_jitter_off_matches_phase_a_behavior`: `194`-`202`
+- `def TestStochasticPhaseB.test_dt_zero_consumes_no_rng_and_no_jitter`: `204`-`213`
+- `def TestStochasticPhaseB.test_replay_reproducibility_with_snapshot_reset`: `215`-`235`

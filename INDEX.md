@@ -5,7 +5,6 @@ Stand: 2026-02-22 21:09:33 UTC
 
 ## Dateien
 
-- Root: `C:/Users/sebas/.gemini/antigravity/scratch/AGI/fnvision_dev`
 - Indexierte Dateien: `11`
 
 ### `/fnvision/__init__.py`

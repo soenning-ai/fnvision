@@ -4,7 +4,7 @@
 
 Status: Ratified v1.2  
 Date: 2026-02-22  
-Updated: 2026-02-22 (MF2 completed and validated)  
+Updated: 2026-02-22 (MF2 completed and validated; M3 baseline documented)  
 License: Apache 2.0  
 Tag: #fnvision
 
@@ -227,7 +227,7 @@ Runtime:
 Optional tools:
 
 - `Pillow`
-- UI layer for calibration tool (`tkinter` or Qt backend)
+- OpenCV HighGUI (`cv2.namedWindow` + trackbars) for calibration UI
 
 ---
 
@@ -240,15 +240,22 @@ fnvision_dev/
 |   |-- config.py
 |   |-- encoder.py
 |   |-- weight_field.py
-|   `-- gaze.py
+|   |-- gaze.py
+|   `-- tools/
+|       |-- __init__.py
+|       `-- calibration.py
 |-- tests/
 |   |-- test_encoder.py
 |   `-- test_gaze.py
 |-- tools/
 |   `-- build_index.py
+|-- docs/
+|   `-- SPEC_fnvision_v1.md
 |-- DEV_NOTES.md
 |-- DEV_NOTES_M2.md
-|-- SPEC_fnvision_v1.md
+|-- DEV_NOTES_M3.md
+|-- nachbesprechung_m1.md
+|-- nachbesprechung_m2.md
 |-- README.md
 |-- CHANGELOG.md
 |-- pyproject.toml
@@ -277,7 +284,7 @@ Delivered:
 
 ### MF3 - Calibration Tool
 
-Status: Open
+Status: In Progress (M3 baseline delivered 2026-02-22)
 
 ### MF4 - Public Release
 
@@ -287,9 +294,9 @@ Status: Open
 
 ## 11. Open Points
 
-- Calibration tool framework choice (`tkinter` vs Qt backend)
 - Binocular asymmetry (`sigma1 != sigma2`) after MF2
 - optional v2 extension: attention-coupled jitter scaling
+- formal calibration-tool tests (parser/trackbar mapping/smoke paths)
 
 ---
 
@@ -309,4 +316,3 @@ Gate status:
 
 - Opus B1/B2 gate: PASSED
 - Sonnet B3/B4 review: PASSED
-

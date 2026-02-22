@@ -14,12 +14,14 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `fnvision/gaze.py`: stateful `GazeController` + `GazeState`
 - `tests/test_gaze.py`: MF2 deterministic/stochastic/replay test coverage
 - `nachbesprechung_m2.md`: MF2 completion documentation
+- `fnvision/tools/calibration.py`: M3 baseline calibration UI (live preview, sliders, mouse gaze, YAML save)
+- `fnvision/tools/__init__.py`: tool package init for script entrypoint
 
 ### Changed
 
-- `SPEC_fnvision_v1.md` updated to v1.2 (MF2 completion, gates, validation snapshot)
-- `README.md` technical specification link now points to `SPEC_fnvision_v1.md`
-- `pyproject.toml` documentation URL now points to `.../SPEC_fnvision_v1.md`
+- `docs/SPEC_fnvision_v1.md` updated to v1.2 (MF2 completion, gates, validation snapshot)
+- `README.md` technical specification link now points to `docs/SPEC_fnvision_v1.md`
+- `pyproject.toml` documentation URL now points to `.../docs/SPEC_fnvision_v1.md`
 
 ---
 
@@ -32,7 +34,7 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `fnvision/encoder.py`: stateless `encode()` with three-zone compositing
 - `fnvision/__init__.py`: public MF1 API exports
 - `tests/test_encoder.py`: MF1 test coverage
-- `SPEC_fnvision_v1.md` (v1.1 at MF1 close)
+- `docs/SPEC_fnvision_v1.md` (v1.1 at MF1 close)
 - Project metadata: `pyproject.toml`, `LICENSE`, `NOTICE`, `CONTRIBUTING.md`, `README.md`
 
 ### Architecture Decisions
@@ -45,4 +47,3 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Fixed
 
 - `pyproject.toml` build backend corrected to `setuptools.build_meta`
-

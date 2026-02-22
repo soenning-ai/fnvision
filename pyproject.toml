@@ -49,7 +49,7 @@ fnvision-calibrate = "fnvision.tools.calibration:main"
 
 [project.urls]
 Repository = "https://github.com/soenning-ai/fnvision"
-Documentation = "https://github.com/soenning-ai/fnvision/blob/main/SPEC_fnvision_v1.md"
+Documentation = "https://github.com/soenning-ai/fnvision/blob/main/docs/SPEC_fnvision_v1.md"
 
 [tool.setuptools.packages.find]
 where = ["."]

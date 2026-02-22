@@ -104,12 +104,47 @@ gaze = GazeController(
 state_copy, rng_state = gaze.snapshot()
 ```
 
+### Calibration Tool (M3 Baseline)
+
+```bash
+fnvision-calibrate --source camera
+```
+
+Optional sources:
+
+```bash
+fnvision-calibrate --source file --path path\\to\\image_or_video.mp4
+fnvision-calibrate --source screen --region 100,100,1280,720
+```
+
+Keys:
+
+- `q` / `Esc`: quit
+- `r`: reset gaze to center
+- `s`: save current config YAML snapshot
+
+### M3 Calibration Examples
+
+Sample collages captured from the calibration tool:
+
+![M3 calibration sample 1](image/calibration_demo_1.png)
+![M3 calibration sample 2](image/calibration_demo_2.png)
+
 ## Documentation
 
-- [Technical Specification](SPEC_fnvision_v1.md)
+- [Technical Specification](docs/SPEC_fnvision_v1.md)
 - [Changelog](CHANGELOG.md)
 - [Contributing](CONTRIBUTING.md)
 - [GitHub](https://github.com/soenning-ai/fnvision)
+
+## Development Documentation (Internal)
+
+- [Project Index](INDEX.md)
+- [DEV_NOTES](DEV_NOTES.md)
+- [DEV_NOTES_M2](DEV_NOTES_M2.md)
+- [DEV_NOTES_M3](DEV_NOTES_M3.md)
+- [Nachbesprechung M1](nachbesprechung_m1.md)
+- [Nachbesprechung M2](nachbesprechung_m2.md)
 
 ## License
 

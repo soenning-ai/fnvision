@@ -50,13 +50,63 @@ pip install fnvision[tools]
 
 ## Quick Start
 
+### Stateless Encoding (MF1)
+
 ```python
-# placeholder – fill in after MF1 implementation
+import numpy as np
+from fnvision import FoveaConfig, FoveaEncoder
+
+frame = np.random.randint(0, 255, (480, 640, 3), dtype=np.uint8)
+encoder = FoveaEncoder(FoveaConfig())
+
+result = encoder.encode(
+    frame_rgb=frame,
+    gaze_xy=(0.5, 0.5),         # center of frame
+    f_separation=1.0,           # max separation = wide-angle
+    attention_level=1.0,        # full attention
+)
+
+print(result.fovea.shape)       # (96, 96, 3)  float32
+print(result.periphery.shape)   # (96, 96, 3)  float32
+print(result.weight_map.shape)  # (480, 640)   float32
+```
+
+### Stateful Gaze Dynamics (MF2)
+
+```python
+from fnvision import FoveaConfig, FoveaEncoder, GazeController
+
+cfg = FoveaConfig()
+encoder = FoveaEncoder(cfg)
+gaze = GazeController(cfg, initial_gaze=(0.5, 0.5))
+
+for frame in video_frames:
+    state = gaze.step(target_xy=(0.7, 0.3), dt=1.0)
+    result = encoder.encode(
+        frame_rgb=frame,
+        gaze_xy=state.gaze_xy,
+        f_separation=state.f_separation_norm,
+    )
+    # result.fovea tracks the target with saccades, hold, and jitter
+```
+
+### Deterministic Replay
+
+```python
+import numpy as np
+from fnvision import FoveaConfig, GazeController
+
+gaze = GazeController(
+    FoveaConfig(),
+    rng=np.random.default_rng(42),   # fixed seed = reproducible
+)
+# snapshot mid-sequence, reset later for exact replay
+state_copy, rng_state = gaze.snapshot()
 ```
 
 ## Documentation
 
-- [Technical Specification](docs/SPEC_fnvision_v1.md)
+- [Technical Specification](SPEC_fnvision_v1.md)
 - [Changelog](CHANGELOG.md)
 - [Contributing](CONTRIBUTING.md)
 - [GitHub](https://github.com/soenning-ai/fnvision)

@@ -19,7 +19,7 @@ from typing import Optional
 import cv2
 import numpy as np
 
-from fnvision import FoveaConfig, FoveaEncoder
+from fnvision import FoveaConfig, FoveaEncoder, GazeController, GazeState
 
 
 WINDOW_NAME = "fnvision M3 Calibration"
@@ -177,6 +177,8 @@ def _build_parser() -> argparse.ArgumentParser:
 def _create_trackbars(cfg: FoveaConfig) -> None:
     cv2.namedWindow(TRACKBAR_WINDOW, cv2.WINDOW_NORMAL)
     cv2.createTrackbar("attention x100", TRACKBAR_WINDOW, 100, 100, _noop)
+    cv2.createTrackbar("auto_spring 0/1", TRACKBAR_WINDOW, 0, 1, _noop)
+    cv2.createTrackbar("sep_max x100", TRACKBAR_WINDOW, int(round(cfg.f_separation_max_norm * 100)), 100, _noop)
     cv2.createTrackbar("f_sep x100", TRACKBAR_WINDOW, 100, 100, _noop)
     cv2.createTrackbar(
         "focal_radius x1000", TRACKBAR_WINDOW, int(round(cfg.focal_radius_norm * 1000)), 500, _noop
@@ -198,8 +200,10 @@ def _create_trackbars(cfg: FoveaConfig) -> None:
     )
 
 
-def _read_cfg_from_trackbars(base_cfg: FoveaConfig) -> tuple[FoveaConfig, float, float]:
+def _read_cfg_from_trackbars(base_cfg: FoveaConfig) -> tuple[FoveaConfig, float, float, bool]:
     att = cv2.getTrackbarPos("attention x100", TRACKBAR_WINDOW) / 100.0
+    auto_mode = cv2.getTrackbarPos("auto_spring 0/1", TRACKBAR_WINDOW) > 0
+    sep_max = max(0.01, cv2.getTrackbarPos("sep_max x100", TRACKBAR_WINDOW) / 100.0)
     f_sep = cv2.getTrackbarPos("f_sep x100", TRACKBAR_WINDOW) / 100.0
     focal = max(0.005, cv2.getTrackbarPos("focal_radius x1000", TRACKBAR_WINDOW) / 1000.0)
     para_factor = max(0.01, cv2.getTrackbarPos("para_factor x100", TRACKBAR_WINDOW) / 100.0)
@@ -222,7 +226,7 @@ def _read_cfg_from_trackbars(base_cfg: FoveaConfig) -> tuple[FoveaConfig, float,
         periphery_res=base_cfg.periphery_res,
         parafovea_res_factor=para_factor,
         periphery_res_factor=peri_factor,
-        f_separation_max_norm=base_cfg.f_separation_max_norm,
+        f_separation_max_norm=sep_max,
         f_separation_min_norm=base_cfg.f_separation_min_norm,
         zoom_max_bonus=base_cfg.zoom_max_bonus,
         pull_strength=base_cfg.pull_strength,
@@ -235,7 +239,12 @@ def _read_cfg_from_trackbars(base_cfg: FoveaConfig) -> tuple[FoveaConfig, float,
         fovea_threshold=f_thr,
         para_threshold=p_thr,
     )
-    return cfg, att, f_sep
+    return cfg, att, f_sep, auto_mode
+
+
+def _sep01_to_abs(f_sep_01: float, cfg: FoveaConfig) -> float:
+    sep = float(f_sep_01) * float(cfg.f_separation_max_norm)
+    return float(np.clip(sep, float(cfg.f_separation_min_norm), float(cfg.f_separation_max_norm)))
 
 
 def _panel(img_bgr: np.ndarray, size: tuple[int, int], title: str) -> np.ndarray:
@@ -269,6 +278,10 @@ def run_calibration(args: argparse.Namespace) -> int:
     _create_trackbars(cfg)
 
     target_dt = 1.0 / max(args.max_fps, 1.0)
+    gaze_ctrl: Optional[GazeController] = None
+    last_auto_mode: Optional[bool] = None
+    last_f_sep_slider: Optional[float] = None
+    last_sep_max_slider: Optional[float] = None
 
     try:
         while True:
@@ -278,12 +291,77 @@ def run_calibration(args: argparse.Namespace) -> int:
                 print("source ended or unavailable, exiting calibration")
                 break
 
-            cfg_now, attention, f_sep = _read_cfg_from_trackbars(cfg)
+            cfg_now, attention, f_sep, auto_mode = _read_cfg_from_trackbars(cfg)
+
+            # Toggle mode via GUI "hebel": when switching to auto, start from current UI target
+            # and current f_sep slider as initial separation.
+            # Also re-init controller when sep_max is changed in auto mode.
+            need_auto_init = (
+                auto_mode
+                and (
+                    gaze_ctrl is None
+                    or last_auto_mode is False
+                    or last_sep_max_slider is None
+                    or abs(cfg_now.f_separation_max_norm - last_sep_max_slider) > 1e-6
+                )
+            )
+            if need_auto_init:
+                if gaze_ctrl is not None and last_auto_mode:
+                    prev = gaze_ctrl.copy_state()
+                    init_gaze = prev.gaze_xy
+                    init_sep = float(
+                        np.clip(
+                            prev.f_separation_norm,
+                            float(cfg_now.f_separation_min_norm),
+                            float(cfg_now.f_separation_max_norm),
+                        )
+                    )
+                    init_tick = prev.tick
+                else:
+                    init_gaze = ui.gaze_xy
+                    init_sep = _sep01_to_abs(f_sep, cfg_now)
+                    init_tick = 0
+
+                gaze_ctrl = GazeController(config=cfg_now, initial_gaze=init_gaze)
+                gaze_ctrl.reset(
+                    GazeState(
+                        gaze_xy=init_gaze,
+                        f_separation_norm=init_sep,
+                        tick=init_tick,
+                    )
+                )
+            if not auto_mode:
+                gaze_ctrl = None
+            last_auto_mode = auto_mode
+
+            if auto_mode and gaze_ctrl is not None:
+                # In auto mode the f_sep slider acts as "new start separation" whenever changed.
+                if last_f_sep_slider is None or abs(f_sep - last_f_sep_slider) > 1e-6:
+                    st0 = gaze_ctrl.copy_state()
+                    gaze_ctrl.reset(
+                        GazeState(
+                            gaze_xy=st0.gaze_xy,
+                            f_separation_norm=_sep01_to_abs(f_sep, cfg_now),
+                            tick=st0.tick,
+                        )
+                    )
+                st = gaze_ctrl.step(target_xy=ui.gaze_xy, attention_level=attention, dt=1.0)
+                gaze_xy = st.gaze_xy
+                if cfg_now.f_separation_max_norm > 0.0:
+                    sep_for_encode = st.f_separation_norm / cfg_now.f_separation_max_norm
+                else:
+                    sep_for_encode = 0.0
+            else:
+                gaze_xy = ui.gaze_xy
+                sep_for_encode = f_sep
+            last_f_sep_slider = f_sep
+            last_sep_max_slider = cfg_now.f_separation_max_norm
+
             encoder = FoveaEncoder(cfg_now)
             out = encoder.encode(
                 frame_rgb=frame_rgb,
-                gaze_xy=ui.gaze_xy,
-                f_separation=f_sep,
+                gaze_xy=gaze_xy,
+                f_separation=sep_for_encode,
                 attention_level=attention,
             )
 
@@ -293,12 +371,16 @@ def run_calibration(args: argparse.Namespace) -> int:
             f1y = int(round(out.f1_pos_norm[1] * max(H - 1, 1)))
             f2x = int(round(out.f2_pos_norm[0] * max(W - 1, 1)))
             f2y = int(round(out.f2_pos_norm[1] * max(H - 1, 1)))
-            gx = int(round(ui.gaze_xy[0] * max(W - 1, 1)))
-            gy = int(round(ui.gaze_xy[1] * max(H - 1, 1)))
+            gx = int(round(gaze_xy[0] * max(W - 1, 1)))
+            gy = int(round(gaze_xy[1] * max(H - 1, 1)))
+            tx = int(round(ui.gaze_xy[0] * max(W - 1, 1)))
+            ty = int(round(ui.gaze_xy[1] * max(H - 1, 1)))
 
             cv2.circle(src_bgr, (f1x, f1y), 6, (255, 80, 80), 2)
             cv2.circle(src_bgr, (f2x, f2y), 6, (80, 255, 80), 2)
             cv2.drawMarker(src_bgr, (gx, gy), (255, 255, 255), cv2.MARKER_CROSS, 16, 1)
+            if auto_mode:
+                cv2.drawMarker(src_bgr, (tx, ty), (255, 220, 0), cv2.MARKER_TILTED_CROSS, 12, 1)
 
             wm_u8 = np.clip(out.weight_map * 255.0, 0, 255).astype(np.uint8)
             wm_color = cv2.applyColorMap(wm_u8, cv2.COLORMAP_JET)
@@ -321,8 +403,10 @@ def run_calibration(args: argparse.Namespace) -> int:
             )
 
             status = (
-                f"gaze=({ui.gaze_xy[0]:.2f},{ui.gaze_xy[1]:.2f}) "
-                f"att={attention:.2f} sep={f_sep:.2f} "
+                f"mode={'auto' if auto_mode else 'manual'} "
+                f"gaze=({gaze_xy[0]:.2f},{gaze_xy[1]:.2f}) "
+                f"att={attention:.2f} sep={sep_for_encode:.2f} "
+                f"sep_max={cfg_now.f_separation_max_norm:.2f} "
                 f"sigma={cfg_now.focal_radius_norm:.3f} "
                 f"gamma={cfg_now.weight_gamma:.2f} "
                 "keys: [s]=save [r]=center [q/esc]=quit"
@@ -344,6 +428,14 @@ def run_calibration(args: argparse.Namespace) -> int:
                 break
             if key == ord("r"):
                 ui.gaze_xy = (0.5, 0.5)
+                if auto_mode and gaze_ctrl is not None:
+                    gaze_ctrl.reset(
+                        GazeState(
+                            gaze_xy=(0.5, 0.5),
+                            f_separation_norm=_sep01_to_abs(f_sep, cfg_now),
+                            tick=0,
+                        )
+                    )
             if key == ord("s"):
                 save_path = Path(args.save_path)
                 stamp = datetime.now().strftime("%Y%m%d_%H%M%S")

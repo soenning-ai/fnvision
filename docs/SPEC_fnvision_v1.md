@@ -1,29 +1,8 @@
 # fnvision - Fovea Native Vision
 
-## Technical Specification v1.2
+## Technical Specification (v1.2)
 
-Status: Ratified v1.2  
-Date: 2026-02-22  
-Updated: 2026-02-22 (MF2 completed and validated; M3 baseline documented)  
-License: Apache 2.0  
-Tag: #fnvision
-
----
-
-## v1.2 Change Summary (MF2)
-
-- MF2 (stateful gaze dynamics) is implemented and gated.
-- `fnvision/gaze.py` provides `GazeController` and `GazeState`.
-- Phase-B stochastic path is active:
-  - hold-probability (saccade skip only)
-  - additive jitter with `dt > 0` guard
-  - snapshot/reset helpers for replay
-- Validation at ratification:
-  - `tests/test_gaze.py`: 22 passed
-  - full suite: 93 passed
-- Reviews:
-  - Opus gate pass for B1/B2
-  - Sonnet API/spec and test review pass for B3/B4
+License: Apache 2.0
 
 ---
 
@@ -81,7 +60,7 @@ With `zoom_max_bonus = 0.40`, convergence yields ~1.4x zoom.
 
 ---
 
-## 3. Gaze Dynamics (MF2)
+## 3. Gaze Dynamics
 
 The stateful gaze layer is implemented in `GazeController.step(...)`.
 
@@ -251,11 +230,6 @@ fnvision_dev/
 |   `-- build_index.py
 |-- docs/
 |   `-- SPEC_fnvision_v1.md
-|-- DEV_NOTES.md
-|-- DEV_NOTES_M2.md
-|-- DEV_NOTES_M3.md
-|-- nachbesprechung_m1.md
-|-- nachbesprechung_m2.md
 |-- README.md
 |-- CHANGELOG.md
 |-- pyproject.toml
@@ -264,55 +238,3 @@ fnvision_dev/
 ```
 
 ---
-
-## 10. Milestones
-
-### MF1 - Core Encoder
-
-Status: Completed (2026-02-21)
-
-### MF2 - Gaze Dynamics and Zoom
-
-Status: Completed (2026-02-22)
-
-Delivered:
-
-- deterministic and stochastic gaze dynamics
-- replay helpers (`copy_state`, `snapshot`, `reset`)
-- full review gates passed (Opus + Sonnet)
-- test hardening complete
-
-### MF3 - Calibration Tool
-
-Status: In Progress (M3 baseline delivered 2026-02-22)
-
-### MF4 - Public Release
-
-Status: Open
-
----
-
-## 11. Open Points
-
-- Binocular asymmetry (`sigma1 != sigma2`) after MF2
-- optional v2 extension: attention-coupled jitter scaling
-- formal calibration-tool tests (parser/trackbar mapping/smoke paths)
-
----
-
-## 12. MF2 Completion Snapshot
-
-Scope:
-
-- Phase A: deterministic gaze core
-- Phase B: hold + jitter + replay
-
-Validation:
-
-- `tests/test_gaze.py`: 22 passed
-- full test suite: 93 passed
-
-Gate status:
-
-- Opus B1/B2 gate: PASSED
-- Sonnet B3/B4 review: PASSED

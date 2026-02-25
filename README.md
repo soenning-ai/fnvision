@@ -155,6 +155,7 @@ Sample collages captured from the calibration tool:
 - [Changelog](CHANGELOG.md)
 - [Contributing](CONTRIBUTING.md)
 - [Code of Conduct](CODE_OF_CONDUCT.md)
+- [Security Policy](SECURITY.md)
 - [GitHub](https://github.com/soenning-ai/fnvision)
 
 ## License

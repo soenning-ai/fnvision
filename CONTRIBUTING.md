@@ -14,6 +14,7 @@ Please follow our [Code of Conduct](CODE_OF_CONDUCT.md) in all project spaces.
 ## Reporting Issues
 
 - Use GitHub Issues.
+- Use the provided issue templates (Bug report / Feature request) where applicable.
 - For bugs: include Python version, OS, a minimal reproducible example, and the full
   traceback.
 - For feature requests: describe the use case first, not the implementation.
@@ -26,7 +27,7 @@ Please follow our [Code of Conduct](CODE_OF_CONDUCT.md) in all project spaces.
 4. Ensure no new hard dependencies are added to the core `fnvision/` package without
    discussion.
 5. Update `CHANGELOG.md` under `[Unreleased]`.
-6. Open a PR with a clear description of what changed and why.
+6. Open a PR using the PR template with a clear description of what changed and why.
 
 ## Code Style
 

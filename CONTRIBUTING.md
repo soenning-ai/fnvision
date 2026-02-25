@@ -2,6 +2,8 @@
 
 Thank you for your interest in contributing.
 
+Please follow our [Code of Conduct](CODE_OF_CONDUCT.md) in all project spaces.
+
 ## Before You Start
 
 - Read `docs/SPEC_fnvision_v1.md` to understand the design philosophy.

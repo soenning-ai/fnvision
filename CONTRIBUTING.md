@@ -1,4 +1,4 @@
-# Contributing to fnvision
+﻿# Contributing to fnvision
 
 Thank you for your interest in contributing.
 
@@ -20,7 +20,7 @@ Thank you for your interest in contributing.
 
 1. Fork the repository and create a branch: `git checkout -b feature/your-feature`
 2. Make your changes.
-3. Run tests: `pytest tests/`
+3. Run tests: `python -m pytest tests -q`
 4. Ensure no new hard dependencies are added to the core `fnvision/` package without
    discussion.
 5. Update `CHANGELOG.md` under `[Unreleased]`.
@@ -31,7 +31,7 @@ Thank you for your interest in contributing.
 - Python 3.10+, type hints throughout.
 - Docstrings for all public classes and functions (Google style).
 - No lines over 100 characters.
-- `float32` is the canonical dtype for all tensor outputs – do not change this.
+- `float32` is the canonical dtype for all tensor outputs - do not change this.
 
 ## Testing
 

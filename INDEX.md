@@ -1,7 +1,7 @@
 # INDEX
 
 Automatisch generierter Navigationsindex fuer aktive Python-Dateien (fnvision_dev).
-Stand: 2026-02-23 20:44:09 UTC
+Stand: 2026-02-25 17:58:10 UTC
 
 ## Dateien
 

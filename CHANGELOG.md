@@ -11,38 +11,48 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
-- `fnvision/gaze.py`: stateful `GazeController` + `GazeState`
-- `tests/test_gaze.py`: MF2 deterministic/stochastic/replay test coverage
-- `fnvision/tools/calibration.py`: M3 baseline calibration UI (live preview, sliders, mouse gaze, YAML save)
-- `fnvision/tools/__init__.py`: tool package init for script entrypoint
+- `fnvision/tools/calibration.py`: interactive calibration tool (camera/file/screen, live preview, sliders, YAML save).
+- Calibration tool auto mode: `auto_spring` toggle using `GazeController`.
+- Calibration tool slider `sep_max x100` for live tuning of spring rest separation.
+- `tests/test_calibration.py`: parser/threshold/auto-mode/screen-failure coverage.
+- M3 visual examples in `README.md`:
+  - `image/calibration_demo_1.png`
+  - `image/calibration_demo_2.png`
 
 ### Changed
 
-- `docs/SPEC_fnvision_v1.md` updated to v1.2 (MF2 completion, gates, validation snapshot)
-- `README.md` technical specification link now points to `docs/SPEC_fnvision_v1.md`
-- `pyproject.toml` documentation URL now points to `.../docs/SPEC_fnvision_v1.md`
-
----
-
-## [0.1.0] - 2026-02-21 (MF1 - Core Encoder)
-
-### Added
-
-- `fnvision/config.py`: `FoveaConfig` validation + YAML round-trip, `FoveaOutput`
-- `fnvision/weight_field.py`: vectorized dual-Gaussian weight map (`compute_weight_map`)
-- `fnvision/encoder.py`: stateless `encode()` with three-zone compositing
-- `fnvision/__init__.py`: public MF1 API exports
-- `tests/test_encoder.py`: MF1 test coverage
-- `docs/SPEC_fnvision_v1.md` (v1.1 at MF1 close)
-- Project metadata: `pyproject.toml`, `LICENSE`, `NOTICE`, `CONTRIBUTING.md`, `README.md`
-
-### Architecture Decisions
-
-- Weight-field threshold zoning over min-distance zoning
-- Dense weight-map pipeline over ring approximation
-- Stateless `encode()` for MF1; stateful gaze deferred to MF2
-- Edge padding in crop helper for border robustness
+- README installation flow is now GitHub-first; PyPI path is optional.
+- README MF2 example now normalizes `f_separation` correctly to `[0,1]`.
+- Public spec links consistently point to `docs/SPEC_fnvision_v1.md`.
+- `docs/SPEC_fnvision_v1.md` cleaned to a timeless technical state (history moved to changelog).
+- `tools/build_index.py` no longer emits absolute root paths into `INDEX.md`.
 
 ### Fixed
 
-- `pyproject.toml` build backend corrected to `setuptools.build_meta`
+- Calibration crash when `para_thr` slider was set to `0`.
+- Screen source capture now fails gracefully (no hard crash on grab errors).
+- In auto mode, `f_sep` slider changes now apply as live set-impulses.
+
+---
+
+## [0.1.0] - 2026-02-21
+
+### Added
+
+- `fnvision/config.py`: `FoveaConfig` validation + YAML round-trip, `FoveaOutput`.
+- `fnvision/weight_field.py`: vectorized dual-Gaussian weight map (`compute_weight_map`).
+- `fnvision/encoder.py`: stateless `encode()` with three-zone compositing.
+- `fnvision/__init__.py`: public MF1 API exports.
+- `tests/test_encoder.py`: MF1 test coverage.
+- Project metadata: `pyproject.toml`, `LICENSE`, `NOTICE`, `CONTRIBUTING.md`, `README.md`.
+
+### Architecture Decisions
+
+- Weight-field threshold zoning over min-distance zoning.
+- Dense weight-map pipeline over ring approximation.
+- Stateless `encode()` for MF1; stateful gaze deferred to MF2.
+- Edge padding in crop helper for border robustness.
+
+### Fixed
+
+- `pyproject.toml` build backend corrected to `setuptools.build_meta`.

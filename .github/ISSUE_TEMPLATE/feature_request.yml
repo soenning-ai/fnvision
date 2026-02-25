@@ -1,0 +1,55 @@
+name: Feature request
+description: Propose a new feature or improvement.
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for proposing an improvement.
+        Please describe the use case first, then possible implementation ideas.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / use case
+      description: What problem are you trying to solve?
+      placeholder: Describe the practical use case and why it matters.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What behavior or API should fnvision provide?
+      placeholder: Clear proposal with expected behavior.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other approaches you considered and why they are less suitable.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope checklist
+      options:
+        - label: This request does not require adding heavy core dependencies (e.g. PyTorch/TensorFlow).
+          required: false
+        - label: I checked existing issues to avoid duplicates.
+          required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: References, experiments, screenshots, related projects.
+    validations:
+      required: false

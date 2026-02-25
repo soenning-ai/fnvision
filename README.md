@@ -41,13 +41,13 @@ fnvision models this directly, from first principles:
 Primary (GitHub):
 
 ```bash
-pip install git+https://github.com/soenning-ai/fnvision.git
+pip install "git+https://github.com/soenning-ai/fnvision.git"
 ```
 
 For the calibration tool:
 
 ```bash
-pip install fnvision[tools]@git+https://github.com/soenning-ai/fnvision.git
+pip install "fnvision[tools] @ git+https://github.com/soenning-ai/fnvision.git"
 ```
 
 Optional (PyPI):

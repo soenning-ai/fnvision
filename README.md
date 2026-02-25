@@ -1,4 +1,4 @@
-# fnvision – Fovea Native Vision
+# fnvision - Fovea Native Vision
 
 <!-- badges: activate after first GitHub release -->
 <!-- ![Build](https://github.com/soenning-ai/fnvision/actions/workflows/tests.yml/badge.svg) -->
@@ -20,7 +20,7 @@ periphery sees motion. This resolution gradient is what makes biological vision 
 fnvision models this directly, from first principles:
 
 - Two coupled foveal centers (F1, F2) with Gaussian resolution fields
-- Three zones: fovea, parafovea, periphery – driven by the combined weight field
+- Three zones: fovea, parafovea, periphery - driven by the combined weight field
 - Zoom via convergence: the distance between F1 and F2 is the only zoom parameter
 - Float32 output, no geometric distortion
 - An interactive calibration tool to tune parameters while watching through the encoder's eyes
@@ -38,11 +38,25 @@ fnvision models this directly, from first principles:
 
 ## Installation
 
+Primary (GitHub):
+
+```bash
+pip install git+https://github.com/soenning-ai/fnvision.git
+```
+
+For the calibration tool:
+
+```bash
+pip install fnvision[tools]@git+https://github.com/soenning-ai/fnvision.git
+```
+
+Optional (PyPI):
+
 ```bash
 pip install fnvision
 ```
 
-For the calibration tool:
+Optional calibration install from PyPI:
 
 ```bash
 pip install fnvision[tools]
@@ -82,10 +96,15 @@ gaze = GazeController(cfg, initial_gaze=(0.5, 0.5))
 
 for frame in video_frames:
     state = gaze.step(target_xy=(0.7, 0.3), dt=1.0)
+    sep_norm_01 = (
+        state.f_separation_norm / cfg.f_separation_max_norm
+        if cfg.f_separation_max_norm > 0
+        else 0.0
+    )
     result = encoder.encode(
         frame_rgb=frame,
         gaze_xy=state.gaze_xy,
-        f_separation=state.f_separation_norm,
+        f_separation=sep_norm_01,
     )
     # result.fovea tracks the target with saccades, hold, and jitter
 ```
@@ -113,7 +132,7 @@ fnvision-calibrate --source camera
 Optional sources:
 
 ```bash
-fnvision-calibrate --source file --path path\\to\\image_or_video.mp4
+fnvision-calibrate --source file --path path\\to\\image.png_or_video.mp4
 fnvision-calibrate --source screen --region 100,100,1280,720
 ```
 
@@ -137,15 +156,6 @@ Sample collages captured from the calibration tool:
 - [Contributing](CONTRIBUTING.md)
 - [GitHub](https://github.com/soenning-ai/fnvision)
 
-## Development Documentation (Internal)
-
-- [Project Index](INDEX.md)
-- [DEV_NOTES](DEV_NOTES.md)
-- [DEV_NOTES_M2](DEV_NOTES_M2.md)
-- [DEV_NOTES_M3](DEV_NOTES_M3.md)
-- [Nachbesprechung M1](nachbesprechung_m1.md)
-- [Nachbesprechung M2](nachbesprechung_m2.md)
-
 ## License
 
-Apache 2.0 – see [LICENSE](LICENSE).
+Apache 2.0 - see [LICENSE](LICENSE).

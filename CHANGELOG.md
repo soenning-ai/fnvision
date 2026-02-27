@@ -13,6 +13,23 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [1.0.0] - 2026-02-27
+
+### Changed
+
+- Promoted package version from `0.1.0` to `1.0.0` for the first stable release.
+- Project classifier updated to `Development Status :: 5 - Production/Stable`.
+- README updated with verified NN-Demo runtime metrics:
+  - pixel reduction and compression (`save`, `comp=xN`)
+  - observed RAM/RT references from integration runs
+  - demo visuals (`image/demo1.png`, `image/demo2.png`, `image/demo3.png`)
+
+### Notes
+
+- Core API and encoder behavior remain compatible with `0.1.0`.
+
+---
+
 ## [0.1.0] - 2026-02-21
 
 ### Added

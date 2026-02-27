@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fnvision"
-version = "0.1.0"
+version = "1.0.0"
 description = "Fovea Native Vision – biologically-motivated dual-fovea encoder for autonomous agents and robotics"
 readme = "README.md"
 license = {file = "LICENSE"}
@@ -19,7 +19,7 @@ keywords = [
     "perception",
 ]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Science/Research",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: Apache Software License",

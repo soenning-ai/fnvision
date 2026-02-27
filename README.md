@@ -149,6 +149,31 @@ Sample collages captured from the calibration tool:
 ![M3 calibration sample 1](image/calibration_demo_1.png)
 ![M3 calibration sample 2](image/calibration_demo_2.png)
 
+## Observed Runtime (NN-Demo)
+
+Representative live values from an NN-Demo run (observe-only, fnvision backend):
+
+| Metric | Value |
+| --- | --- |
+| Source pixels | `1720 x 1140 = 1,968,000` |
+| Encoded pixels | `640 x 424 = 271,360` |
+| Pixel reduction | `86.2%` |
+| Compression factor | `x7.25` |
+| Frame reaction time (`rt`) | `~100-110 ms` |
+| Encoder process RAM | `~90-95 MB` (typically low two-digit to low three-digit MB range) |
+
+Notes:
+
+- The reduction/compression values come directly from the live demo overlay:
+  `px:1968000 -> 271360`, `save=86.2%`, `comp=x7.25`.
+- Values vary with monitor scale, capture size, and host load.
+
+### Demo Images (demo1-demo3)
+
+![NN-Demo sample 1](image/demo1.png)
+![NN-Demo sample 2](image/demo2.png)
+![NN-Demo sample 3](image/demo3.png)
+
 ## Documentation
 
 - [Technical Specification](docs/SPEC_fnvision_v1.md)

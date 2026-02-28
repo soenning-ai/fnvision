@@ -174,8 +174,22 @@ Notes:
 ![NN-Demo sample 2](image/demo2.png)
 ![NN-Demo sample 3](image/demo3.png)
 
-## Documentation
+## Ethics and Acceptable Use
 
+fnvision is released under the Apache License 2.0, free to use, modify, and distribute.
+
+However, this project also includes a clear statement of intent:
+
+**fnvision was not built to harm or surveil people.**
+
+The author explicitly opposes the use of this software in weapons systems,
+surveillance of individuals or populations, suppression of human rights,
+or applications designed to cause harm to human beings.
+
+This is not a legal restriction. It is a moral and ethical position.
+A full statement of values and unacceptable uses is available in
+[ACCEPTABLE_USE_POLICY.md](ACCEPTABLE_USE_POLICY.md).
+## Documentation
 - [Technical Specification](docs/SPEC_fnvision_v1.md)
 - [Changelog](CHANGELOG.md)
 - [Contributing](CONTRIBUTING.md)
@@ -186,3 +200,4 @@ Notes:
 ## License
 
 Apache 2.0 - see [LICENSE](LICENSE).
+

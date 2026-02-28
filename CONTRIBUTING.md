@@ -1,4 +1,4 @@
-﻿# Contributing to fnvision
+# Contributing to fnvision
 
 Thank you for your interest in contributing.
 
@@ -7,6 +7,7 @@ Please follow our [Code of Conduct](CODE_OF_CONDUCT.md) in all project spaces.
 ## Before You Start
 
 - Read `docs/SPEC_fnvision_v1.md` to understand the design philosophy.
+- Read [ACCEPTABLE_USE_POLICY.md](ACCEPTABLE_USE_POLICY.md) to understand the project's ethical usage intent.
 - The core principle: first-principles biological accuracy, no architectural bloat.
   If a contribution requires adding a heavy dependency (e.g. PyTorch, TensorFlow),
   it belongs in a separate integration package, not in the core encoder.
@@ -47,3 +48,4 @@ Please follow our [Code of Conduct](CODE_OF_CONDUCT.md) in all project spaces.
 
 By contributing, you agree that your contributions are licensed under the Apache License 2.0,
 as described in `LICENSE`.
+

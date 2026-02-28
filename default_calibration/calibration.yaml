@@ -1,0 +1,19 @@
+# fnvision FoveaConfig
+focal_radius_norm: 0.12
+fovea_res: [96, 96]
+parafovea_res: [128, 128]
+periphery_res: [96, 96]
+parafovea_res_factor: 0.6
+periphery_res_factor: 0.15
+f_separation_max_norm: 0.16
+f_separation_min_norm: 0.0
+zoom_max_bonus: 0.4
+pull_strength: 0.015
+gaze_max_step_norm: 0.06
+gaze_hold_prob: 0.12
+gaze_jitter_norm: 0.01
+periphery_attention_floor: 0.15
+attention_inner_threshold: 0.3
+weight_gamma: 2.94
+fovea_threshold: 0.44
+para_threshold: 0.05
